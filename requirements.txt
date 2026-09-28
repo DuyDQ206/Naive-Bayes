@@ -1,0 +1,26 @@
+# Pinned to the exact versions the .joblib bundles were trained and saved with.
+# If joblib.load() warns about a version mismatch, install these versions.
+
+scikit-learn==1.7.2
+numpy==2.2.6
+pandas==2.3.3
+scipy==1.16.2
+joblib==1.5.2
+matplotlib==3.11.1
+
+# --- development / report tooling -------------------------------------------
+# The library itself needs nothing below this line.
+pytest>=8
+jupyterlab>=4
+nbformat>=5.9
+nbclient>=0.10
+
+# TV4 (the Streamlit interface) also needs:
+#   streamlit>=1.40
+# TV7 (slides) may need:
+#   typst
+#
+# docs/report.tex additionally needs a TeX distribution with XeLaTeX and the
+# TeX Gyre fonts -- MiKTeX or TeX Live on Windows, `apt install texlive-xetex
+# texlive-latex-extra texlive-fonts-recommended` on Debian/Ubuntu. It is a
+# system-level install, not a pip package, so it is not listed here.

@@ -1,0 +1,19 @@
+# Demo sentences for the live presentation.
+# Format: <typed text>  ||  <predicted label> (confidence, latency)
+# Predictions below were produced by actually running the models.
+
+--- sms ---
+Congratulations! You have won a FREE 1000 pound gift card. Text CLAIM to 80086 now!  ||  Spam (0.9999, 1.4 ms)
+URGENT! Your account has been suspended. Verify your password at http://secure-bank-verify.com now  ||  Spam (0.9878, 0.9 ms)
+Free entry into our weekly competition! Just reply YES to join.  ||  Spam (1.0000, 0.9 ms)
+Hey are we still meeting for lunch tomorrow at that new place near the station?  ||  Ham (legit message) (0.9999, 0.9 ms)
+Can you pick up milk and bread on your way home? Thanks!  ||  Ham (legit message) (0.9998, 0.9 ms)
+Docu no. 4 received this morning, please confirm if the figures match our records.  ||  Ham (legit message) (0.7709, 0.8 ms)
+
+--- imdb ---
+An absolute masterpiece from the director; the acting is flawless and I loved every minute of it.  ||  Positive (0.7499, 1.2 ms)
+One of the best films I have seen this year. Brilliant script, stunning visuals, wonderful soundtrack.  ||  Positive (0.8915, 1.2 ms)
+I did NOT like this film at all. It was a complete waste of two hours of my life.  ||  Negative (0.9402, 1.2 ms)
+A dull, predictable mess. The plot made no sense and the dialogue was painful to sit through.  ||  Negative (0.9844, 1.1 ms)
+The acting was fine but the story dragged in the middle and the ending felt rushed.  ||  Negative (0.6670, 1.2 ms)
+Honestly one of the most boring films I have ever watched.  ||  Negative (0.8235, 1.2 ms)

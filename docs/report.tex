@@ -1,0 +1,280 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage{fontspec}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage[a4paper,left=2.5cm,right=2.5cm,top=2.4cm,bottom=2.4cm]{geometry}
+\usepackage{xcolor}
+\usepackage[hidelinks,bookmarks=true]{hyperref}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{titlesec}
+\usepackage{setspace}
+\usepackage{needspace}
+
+
+% TeX Gyre Termes có sẵn trong mọi bản TeX Live và phủ đủ khối Latin
+% Extended Additional, nên tiếng Việt hiển thị bình thường không cần cấu hình gì thêm.
+\setmainfont{TeX Gyre Termes}
+\setsansfont{TeX Gyre Heros}
+\setmonofont{TeX Gyre Cursor}
+
+\definecolor{hdr}{HTML}{1F3864}
+\renewcommand{\arraystretch}{1.2}
+\setstretch{1.08}
+\clubpenalty=10000
+\widowpenalty=10000
+\raggedbottom
+\titleformat{\section}{\sffamily\Large\bfseries\color{hdr}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\sffamily\large\bfseries\color{hdr}}{\thesubsection}{0.7em}{}
+\titlespacing*{\section}{0pt}{1.6em}{0.6em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.4em}
+\captionsetup{font=small,labelfont=bf,labelsep=period,justification=raggedright,singlelinecheck=false,skip=6pt}
+\setlength{\tabcolsep}{5pt}
+\setlength{\parskip}{0.4em}
+\setlist[itemize]{leftmargin=1.4em,itemsep=0.15em,topsep=0.3em}
+\setlist[enumerate]{leftmargin=1.7em,itemsep=0.25em,topsep=0.3em}
+
+\newcommand{\task}[1]{\textcolor{hdr}{\textbf{#1}}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+% Tên tiếng Việt cho các nhãn tự động
+
+\renewcommand{\appendixname}{Phụ lục}
+
+\renewcommand{\tablename}{Bảng}
+\renewcommand{\figurename}{Hình}
+
+
+
+
+
+\begin{document}
+\begin{center}
+{\sffamily\huge\bfseries\color{hdr} Naive Bayes}\\[0.6em]
+\end{center}
+\vspace{0.3em}
+
+
+
+
+\section{Dữ liệu}
+
+
+\begin{longtable}{@{}p{0.24\textwidth}p{0.72\textwidth}@{}}
+\toprule
+\textbf{Bộ dữ liệu} & \textbf{Mô tả} \\
+\midrule
+\endhead
+\task{SMS Spam Collection} &
+Phân loại nhị phân SMS rác, ham và spam. Đây là benchmark chuẩn của UCI cho bài toán lọc SMS rác trên điện thoại. File tab-separated, mã hoá Latin-1, và mất cân bằng khá mạnh: khoảng 0.8660 số tin nhắn là ham. \\
+\addlinespace
+\task{IMDb Sentiment} &
+Phân loại nhị phân cảm xúc trên 50\,000 bài đánh giá phim, tiêu cực và tích cực. Đây là benchmark chuẩn cho bài toán phân tích cảm xúc, do Maas và cộng sự giới thiệu tại ACL 2011, cân bằng 50/50 ngay từ đầu. Bộ dữ liệu có sẵn tập train/test chính thức, giữ nguyên không chia lại. \\
+\bottomrule
+\end{longtable}
+\addtocounter{table}{-1}
+
+
+\section{Phương pháp}
+
+\subsection{Pipeline}
+
+\begin{center}
+\footnotesize
+\code{văn bản thô} $\longrightarrow$ \code{clean\_text()} $\longrightarrow$
+\code{TfidfVectorizer} $\longrightarrow$ \code{MultinomialNB}
+$\longrightarrow$ \code{predict\_proba}
+\end{center}
+
+\subsection{Tiền xử lý}
+
+\begin{table}[H]
+\centering
+\caption{Cấu hình TF-IDF. Mỗi thiết lập là một lựa chọn có đo đạc, không để mặc định.}
+\label{tab:vec}
+\begin{tabular}{ll}
+\toprule
+\textbf{Thiết lập} & \textbf{Giá trị} \\
+\midrule
+\code{lowercase} & \code{True} \\
+\code{stop\_words} & \code{None} \\
+\code{ngram\_range} & \code{(1, 2)} \\
+\code{min\_df} & \code{2} \\
+\code{max\_df} & \code{0.9} \\
+\code{max\_features} & \code{50,000} \\
+\code{sublinear\_tf} & \code{True} \\
+\code{token\_pattern} & \code{r"(?u)\textbackslash b\textbackslash w\textbackslash w+\textbackslash b"} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Hai lựa chọn đáng nói nhất là \emph{không bỏ stopword} và \emph{giữ bigram}. Trong tiếng Anh, phủ định mang thông tin cảm xúc: bỏ từ \code{not} thì ``not good'' biến thành ``good'' và đảo ngược nhãn. Bigram giữ nguyên các cụm từ này.
+
+Bước làm sạch loại bỏ ngắt dòng HTML (các bài review IMDb bị dính liền nhau bằng \code{<br />}), URL, địa chỉ email và số, rồi gộp khoảng trắng thừa. Không cái nào trong số này mang thông tin về nhãn. Hàm làm sạch được tách riêng khỏi vectoriser để giao diện có thể dùng lại y hệt trên văn bản người dùng nhập vào.
+
+\subsection{Chọn tham số}
+
+Naive Bayes chỉ có đúng một siêu tham số, hằng số smoothing cộng tính $\alpha$. Dò trên lưới
+
+\begin{center}
+\code{ALPHAS = [0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]}
+\end{center}
+
+Bằng cross-validation 3-fold bên trong tập train. Lưới dò cố tình chọn rộng, vì hai bài toán cần mức smoothing rất khác nhau: SMS thích $\alpha =$ 0.03 còn IMDb thích $\alpha =$ 1, chênh nhau 33 lần. Smoothing quá tay gây hại rõ rệt trên bài toán mất cân bằng, vì nó khiến likelihood bị lớp đa số lấn át.
+
+Ngưỡng quyết định được chọn trên một phần validation phân tầng, chiếm 15\% tập train, dò trên \code{[0.2, \dots, 0.6]}. Bước này được thêm vào sau một lần chọn ngưỡng sai cách: ở bản chạy trước, ngưỡng được chọn bằng cách tối đa hoá F1 ngay trên tập test, cho F1 là 0.9441 trên SMS. Đó là rò rỉ nhãn (label leakage), và con số đúng là 0.9399. 
+
+\section{Kết quả}\label{sec:results}
+
+\begin{table}[H]
+\centering
+\caption{Kết quả chính trên tập test, tại ngưỡng đã chọn từ validation. Precision, recall, F1 tính cho lớp dương.}
+\label{tab:main}
+\setlength{\tabcolsep}{10pt}
+\begin{tabular}{lrr}
+\toprule
+ & \textbf{SMS Spam Collection} & \textbf{IMDb Sentiment} \\
+\midrule
+Train & 4,459 & 25,000 \\
+Test & 1,115 & 25,000 \\
+Features & 11,373 & 50,000 \\
+$\alpha$ & 0.03 & 1 \\
+Ngưỡng & 0.55 & 0.45 \\
+\midrule
+Accuracy & 0.9848 & 0.8729 \\
+Precision & 0.9925 & 0.8626 \\
+Recall & 0.8926 & 0.8872 \\
+F1 & 0.9399 & 0.8747 \\
+F1 @ 0.5 & 0.9399 & 0.8696 \\
+Macro-F1 & 0.9656 & 0.8729 \\
+ROC--AUC & 0.9889 & 0.9451 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Accuracy khi dữ liệu mất cân bằng}
+
+Trên SMS, accuracy đạt 0.9848 nhưng thực ra không nói lên nhiều điều. Lý do là 0.8660 số tin nhắn trong dữ liệu vốn là tin bình thường (ham), nên một mô hình chỉ biết gắn nhãn ham cho mọi tin nhắn cũng đã đạt accuracy 0.8660 mà không lọc được tin rác nào. Vì vậy, khả năng lọc spam của mô hình cần được đánh giá qua các chỉ số khác: recall đạt 0.8926 (mô hình bắt được khoảng 89\% số tin rác) và ROC--AUC đạt 0.9889 (mô hình xếp hạng tin rác cao hơn tin thường trong hầu hết các trường hợp). Đây cũng là lý do phần ablation phía dưới có thử gán trọng số theo lớp để bù cho sự mất cân bằng này.
+
+\subsection{Ảnh hưởng của hằng số smoothing}
+
+Với $\alpha = 1$ mặc định của thư viện, mô hình SMS chỉ đạt F1 0.8494; recall chỉ 0.74, tức 39 trong số 149 tin rác bị lọt qua thành ham. Giảm $\alpha$ xuống 0.03 thì F1 tăng lên 0.9399 và recall lên 0.8926. Việc nhân nhiều xác suất có điều kiện lại với nhau khiến mô hình trở nên thận trọng quá mức, và một mô hình thận trọng trên bài toán mất cân bằng thì mặc định nghiêng về lớp đa số. Chỉ một siêu tham số, chênh nhau tới khoảng 9 điểm F1.
+
+\subsection{Khả năng tổng quát hoá}
+
+Cross-validation 5-fold trên tập train cho macro-F1 là 0.9030 với SMS và 0.8604 với IMDb. Cả hai đều thấp hơn một chút so với con số đo trên tập test giữ riêng, đúng như kỳ vọng và chênh lệch đủ nhỏ để không coi là overfit. Laplace smoothing cùng với việc giới hạn số chiều từ vựng là hai thứ giữ mô hình ổn định trong không gian nhiều chiều này.
+
+\section{Ablation}\label{sec:ablation}
+
+\begin{table}[H]
+\centering
+\caption{Mỗi quyết định tiền xử lý đáng giá bao nhiêu. F1 tính cho lớp dương; cấu hình được chọn dùng đánh dấu riêng.}
+\label{tab:ablation}
+\footnotesize
+\begin{tabular}{@{}llrrrr@{}}
+\toprule
+\textbf{Bộ dữ liệu} & \textbf{Cấu hình} & \textbf{Features} & \textbf{Accuracy} & \textbf{F1} & \textbf{Macro-F1} \\
+\midrule
+SMS Spam Collection & CountVectorizer (đếm thô), unigram & 3,289 & 0.9830 & 0.9343 & 0.9622 \\
+SMS Spam Collection & TF-IDF, unigram & 3,289 & 0.9821 & 0.9291 & 0.9594 \\
+SMS Spam Collection & TF-IDF, unigram + bỏ stopword tiếng Anh & 3,045 & 0.9794 & 0.9199 & 0.9540 \\
+SMS Spam Collection & TF-IDF, (1,2), giữ phủ định  [\textbf{DÙNG}] & 11,373 & 0.9848 & 0.9399 & 0.9656 \\
+SMS Spam Collection & TF-IDF (1,2) + trọng số lớp cân bằng & 11,373 & 0.9722 & 0.8970 & 0.9405 \\
+\midrule
+IMDb Sentiment & CountVectorizer (đếm thô), unigram & 44,213 & 0.8168 & 0.8042 & 0.8160 \\
+IMDb Sentiment & TF-IDF, unigram & 44,213 & 0.8357 & 0.8263 & 0.8352 \\
+IMDb Sentiment & TF-IDF, unigram + bỏ stopword tiếng Anh & 43,910 & 0.8369 & 0.8292 & 0.8366 \\
+IMDb Sentiment & TF-IDF, (1,2), giữ phủ định  [\textbf{DÙNG}] & 50,000 & 0.8720 & 0.8696 & 0.8720 \\
+IMDb Sentiment & TF-IDF (1,2) + trọng số lớp cân bằng & 50,000 & 0.8720 & 0.8696 & 0.8720 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Ba điểm đáng chú ý ở bảng này. Chuyển từ đếm thô sang TF--IDF đáng giá khoảng hai điểm F1 trên IMDb và gần như không đổi gì trên SMS. Thêm bigram đáng giá 4.3 điểm F1 trên IMDb, mức tăng lớn nhất và gần như miễn phí lúc suy luận vì mô hình chỉ thêm cột chứ không thêm gì khác. Bỏ stopword tiếng Anh lại \emph{làm giảm} kết quả ở cả hai bài toán.
+
+\section{So sánh với các mô hình khác}
+
+Cùng một cách chia dữ liệu, cùng vectoriser, giới hạn \code{max\_features} ở 20\,000 cho công bằng vì các mô hình cây tổng hợp (tree ensemble) làm ma trận trở nên dày đặc hơn. Cột \code{Fit} là thời gian một lần fit với siêu tham số cuối cùng, nên so sánh ngang hàng nhau; cột \code{Tune} báo thêm chi phí dò siêu tham số riêng.
+
+\Needspace{10\baselineskip}
+\subsection{SMS Spam Collection}
+
+\begin{table}[H]
+\centering
+\small
+\caption{SMS Spam Collection.}
+\label{tab:bench-sms}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lrrrrrrrrr@{}}
+\toprule
+\textbf{Mô hình} & \textbf{Fit (s)} & \textbf{Tune (s)} & \textbf{Infer} & \textbf{Size (KB)} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{ROC--AUC} \\
+\midrule
+MultinomialNB $\alpha$=0.03 & 0.008 & 0.40 & 0.3~$\mu$s & 356.2 & 0.9848 & 0.9925 & 0.8926 & 0.9399 & 0.9889 \\
+BernoulliNB $\alpha$=0.001 & 0.009 & 0.44 & 1.0~$\mu$s & 356.2 & 0.9848 & 0.9925 & 0.8926 & 0.9399 & 0.9850 \\
+ComplementNB $\alpha$=0.001 & 0.008 & 0.39 & 0.3~$\mu$s & 445.1 & 0.9785 & 0.9195 & 0.9195 & 0.9195 & 0.9870 \\
+LogisticRegression & 4.009 & 0.00 & 0.4~$\mu$s & 89.8 & 0.9695 & 1.0000 & 0.7718 & 0.8712 & 0.9917 \\
+LinearSVC & 0.016 & 0.00 & 0.3~$\mu$s & 89.7 & 0.9848 & 0.9714 & 0.9128 & 0.9412 & -- \\
+KNN (k=5) & 0.004 & 0.00 & 0.115~ms & 1048.5 & 0.9193 & 1.0000 & 0.3960 & 0.5673 & 0.8440 \\
+RandomForest(50) & 0.225 & 0.00 & 0.028~ms & 3161.4 & 0.9758 & 1.0000 & 0.8188 & 0.9004 & 0.9868 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\Needspace{10\baselineskip}
+\subsection{IMDb Sentiment}
+
+\begin{table}[H]
+\centering
+\small
+\label{tab:bench-imdb}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lrrrrrrrrr@{}}
+\toprule
+\textbf{Mô hình} & \textbf{Fit (s)} & \textbf{Tune (s)} & \textbf{Infer} & \textbf{Size (KB)} & \textbf{Accuracy} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} & \textbf{ROC--AUC} \\
+\midrule
+MultinomialNB $\alpha$=3 & 0.075 & 2.98 & 0.002~ms & 625.8 & 0.8659 & 0.8773 & 0.8508 & 0.8638 & 0.9418 \\
+BernoulliNB $\alpha$=1 & 0.135 & 4.79 & 0.003~ms & 625.8 & 0.8626 & 0.8618 & 0.8638 & 0.8628 & 0.9317 \\
+ComplementNB $\alpha$=3 & 0.072 & 3.30 & 0.001~ms & 782.1 & 0.8659 & 0.8773 & 0.8508 & 0.8638 & 0.9418 \\
+LogisticRegression & 3.611 & 0.00 & 0.5~$\mu$s & 157.2 & 0.9004 & 0.8961 & 0.9059 & 0.9010 & 0.9631 \\
+LinearSVC & 1.058 & 0.00 & 0.6~$\mu$s & 157.1 & 0.8922 & 0.8927 & 0.8915 & 0.8921 & -- \\
+KNN (k=5) & \multicolumn{9}{l}{\emph{bỏ qua trên IMDb (giới hạn bộ nhớ/thời gian)}} \\
+RandomForest(50) & \multicolumn{9}{l}{\emph{bỏ qua trên IMDb (giới hạn bộ nhớ/thời gian)}} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Kết quả so sánh}
+
+\begin{enumerate}
+\item \textbf{Về độ chính xác, Naive Bayes không phải mô hình tốt nhất.} Trên IMDb, Logistic Regression đạt F1 0.9010, cao hơn 0.8747 của Naive Bayes. Trên SMS, hai mô hình cho kết quả gần như ngang nhau.
+
+\item \textbf{Về thời gian huấn luyện, Naive Bayes vượt trội rõ rệt.} Một lần fit MultinomialNB mất 0.008~s, trong khi Logistic Regression mất 4.009~s, tức chậm hơn hơn 500 lần. Naive Bayes chỉ có một siêu tham số cần điều chỉnh; random forest có từ năm siêu tham số trở lên và có kích thước lớn hơn khoảng 8.9 lần trên đĩa.
+
+\item \textbf{Về tốc độ suy luận, Naive Bayes không có lợi thế.} Độ trễ được đo từ đầu đến cuối cho một lần dự đoán đơn lẻ, tương ứng với những gì một ứng dụng demo (Streamlit) thực tế phải chịu. Kết quả: Naive Bayes mất khoảng 0.77~ms, còn LinearSVC và Logistic Regression mất khoảng 0.65~ms. Nguyên nhân là bước vector hoá TF--IDF tốn khoảng 0.53~ms và được \emph{dùng chung} cho mọi mô hình có cùng từ vựng, còn thời gian chạy riêng của bộ phân loại là không đáng kể. Ở quy mô này, mọi mô hình tuyến tính đều dưới một mili-giây, nên tốc độ suy luận không tạo ra khác biệt giữa các mô hình. Ở một bản đo trước, lợi thế tốc độ của Naive Bayes từng được ghi nhận dựa trên phép đo theo lô (batch) chỉ tính riêng bước phân loại; cách đo đó không phản ánh trải nghiệm của người dùng thực nên kết luận này đã được loại bỏ.
+
+\item \textbf{Thời gian huấn luyện gần bằng 0 của k-NN không có nghĩa là mô hình nhẹ.} k-NN là mô hình lazy, toàn bộ chi phí chuyển sang giai đoạn suy luận: 0.115~ms mỗi lần dự đoán, so với 0.3~$\mu$s của Naive Bayes (cả hai đo trên dữ liệu đã được vector hoá). Ngoài ra, k-NN vẫn phải chịu thêm chi phí vector hoá dùng chung nêu ở mục trên.
+
+\item \textbf{Chi phí điều chỉnh tham số có thể lớn hơn chi phí huấn luyện.} Việc dò $\alpha$ trên SMS mất 0.40~s, gấp khoảng 50 lần một lần fit đơn lẻ (0.008~s). Do đó, mô hình huấn luyện nhanh chưa chắc đã tiết kiệm công sức trong cả quá trình phát triển.
+
+\item \textbf{Điều kiện so sánh nghiêng về phía Naive Bayes.} Naive Bayes đã được điều chỉnh $\alpha$, còn Logistic Regression được chạy với thiết lập mặc định. Vì vậy, việc Logistic Regression vẫn vượt Naive Bayes trên IMDb không xuất phát từ lợi thế về điều chỉnh tham số; nếu Logistic Regression cũng được điều chỉnh, khoảng cách này có thể còn lớn hơn.
+\end{enumerate}
+
+\section{Hạn chế}
+
+\begin{itemize}
+\item \textbf{Giả định độc lập bị vi phạm.} Rõ nhất là các bigram trùng lặp với những unigram nằm trong chúng. Nhãn dự đoán vẫn tốt, nhưng xác suất mô hình trả về chưa được hiệu chỉnh nên chỉ nên dùng như điểm xếp hạng, không nên đọc như xác suất thật.
+\item \textbf{Phạm vi dữ liệu hẹp.} Cả hai bộ dữ liệu đều là tiếng Anh và gắn với chủ đề cụ thể (tin nhắn SMS, bài đánh giá phim). Kết quả và ngưỡng đã chọn chưa được kiểm chứng trên ngôn ngữ hoặc lĩnh vực khác.
+\item \textbf{Chỉ một lần chia dữ liệu và một seed.} Cross-validation 5-fold trên tập train cho thấy kết quả tương đối ổn định giữa các lần chia, nhưng chưa đo được mức dao động của điểm trên tập test.
+\item \textbf{Dữ liệu spam đã cũ.} Bộ SMS Spam Collection được thu thập từ khoảng năm 2011. Spam hiện nay thường cố tình viết sai chính tả để né bộ lọc, và mô hình bag-of-n-gram không nhận ra được kiểu này.
+\item \textbf{Độ chính xác trên IMDb thấp hơn mô hình khác.} Naive Bayes thấp hơn Logistic Regression khoảng 2.6 điểm F1. Ngoài ra, dùng $(1,3)$-gram cho IMDb có thể tăng thêm khoảng 1.0 điểm F1, nhưng mức tăng này không giữ được trên SMS nên cấu hình dùng chung chưa tận dụng.
+\end{itemize}
+
+\end{document}
