@@ -1,11 +1,11 @@
 import streamlit as st
 import joblib
 import os
+import time
 
-# 1. Cấu hình trang UI dạng Rộng (Wide) để bố cục được thoáng đẹp
+# 1. Cấu hình trang UI dạng Rộng (Wide)
 st.set_page_config(
     page_title="Naive Bayes NLP Classifier",
-    # page_icon="🤖",
     layout="wide"
 )
 
@@ -37,11 +37,46 @@ try:
 except Exception as e:
     st.error(f"Lỗi khi tải các file mô hình từ thư mục models/: {e}")
 
-# 3. Sidebar chuyển đổi bài toán
+# 3. Định nghĩa Dialog (Popup Box đè giữa màn hình)
+@st.dialog("KẾT QUẢ DỰ ĐOÁN")
+def show_sms_result(is_spam, spam_prob, ham_prob, execution_time):
+    if is_spam:
+        st.error("Kết quả: SPAM")
+        st.metric("Xác suất Spam", f"{spam_prob*100:.2f}%")
+    else:
+        st.success("Kết quả: Bình thường (HAM)")
+        st.metric("Xác suất Bình thường", f"{ham_prob*100:.2f}%")
+    
+    st.write("**Phân bố xác suất Naive Bayes:**")
+    st.write(f"Bình thường: **{ham_prob*100:.2f}%**")
+    st.progress(float(ham_prob))
+    st.write(f"Spam: **{spam_prob*100:.2f}%**")
+    st.progress(float(spam_prob))
+    
+    st.caption(f"Thời gian xử lý: {execution_time:.2f} ms")
+
+@st.dialog("KẾT QUẢ PHÂN TÍCH")
+def show_imdb_result(is_pos, pos_prob, neg_prob, execution_time):
+    if is_pos:
+        st.success("Kết quả: Tích cực (POSITIVE)")
+        st.metric("Độ Tích Cực", f"{pos_prob*100:.2f}%")
+    else:
+        st.error("Kết quả: Tiêu cực (NEGATIVE)")
+        st.metric("Độ Tiêu Cực", f"{neg_prob*100:.2f}%")
+    
+    st.write("**Phân bố cảm xúc:**")
+    st.write(f"Tích cực: **{pos_prob*100:.2f}%**")
+    st.progress(float(pos_prob))
+    st.write(f"Tiêu cực: **{neg_prob*100:.2f}%**")
+    st.progress(float(neg_prob))
+    
+    st.caption(f"Thời gian xử lý: {execution_time:.2f} ms")
+
+# 4. Sidebar chuyển đổi bài toán
 st.sidebar.title("Chọn Bài Toán")
 task = st.sidebar.radio(
     "Chuyển đổi ứng dụng:",
-    ("SMS Spam Classifier", "🎬 IMDb Sentiment Analysis")
+    ("SMS Spam Classifier", "IMDb Sentiment Analysis")
 )
 
 st.sidebar.divider()
@@ -52,14 +87,12 @@ st.sidebar.info(
 # Tiêu đề ứng dụng
 st.markdown("<h1 class='main-title'>Naive Bayes Text Classification</h1>", unsafe_allow_html=True)
 
-
 # -----------------------------------------------------------------------------
 # BÀI TOÁN 1: SMS SPAM
 # -----------------------------------------------------------------------------
 if task == "SMS Spam Classifier":
     st.subheader("Phân loại Tin nhắn SMS (Spam / Ham)")
     
-    # Session state quản lý nội dung ô input
     if "sms_input" not in st.session_state:
         st.session_state.sms_input = ""
 
@@ -85,36 +118,23 @@ if task == "SMS Spam Classifier":
 
     if submit:
         if user_input.strip():
-            # Biến đổi văn bản & Dự đoán
+            start_time = time.time()
+            
             vec_input = sms_vec.transform([user_input])
             pred = sms_model.predict(vec_input)[0]
             probs = sms_model.predict_proba(vec_input)[0]
             
-            # Xác định vị trí nhãn
+            execution_time = (time.time() - start_time) * 1000
+            
             classes = list(sms_model.classes_)
             spam_idx = classes.index("spam") if "spam" in classes else 1
             spam_prob = probs[spam_idx]
             ham_prob = 1.0 - spam_prob
             
-            st.divider()
-            res_col1, res_col2 = st.columns([1, 2])
-            
             is_spam = str(pred).lower() in ['1', 'spam']
             
-            with res_col1:
-                if is_spam:
-                    st.error("###Kết quả: SPAM")
-                    st.metric("Xác suất Spam", f"{spam_prob*100:.2f}%")
-                else:
-                    st.success("###Kết quả: Bình thường")
-                    st.metric("Xác suất Bình thường", f"{ham_prob*100:.2f}%")
-
-            with res_col2:
-                st.write("**Chi tiết phân bố xác suất của Naive Bayes:**")
-                st.write(f"**Bình thường:** {ham_prob*100:.2f}%")
-                st.progress(float(ham_prob))
-                st.write(f"**SPAM:** {spam_prob*100:.2f}%")
-                st.progress(float(spam_prob))
+            # Gọi Pop-up Box đè giữa trang
+            show_sms_result(is_spam, spam_prob, ham_prob, execution_time)
         else:
             st.warning("Vui lòng nhập nội dung tin nhắn.")
 
@@ -147,34 +167,22 @@ else:
 
     if submit:
         if user_input.strip():
-            # Biến đổi văn bản & Dự đoán
+            start_time = time.time()
+            
             vec_input = imdb_vec.transform([user_input])
             pred = imdb_model.predict(vec_input)[0]
             probs = imdb_model.predict_proba(vec_input)[0]
+            
+            execution_time = (time.time() - start_time) * 1000
             
             classes = list(imdb_model.classes_)
             pos_idx = classes.index("positive") if "positive" in classes else (classes.index("pos") if "pos" in classes else 1)
             pos_prob = probs[pos_idx]
             neg_prob = 1.0 - pos_prob
             
-            st.divider()
-            res_col1, res_col2 = st.columns([1, 2])
-            
             is_pos = str(pred).lower() in ['1', 'pos', 'positive']
             
-            with res_col1:
-                if is_pos:
-                    st.success("### Kết quả: Tích cực")
-                    st.metric("Độ Tích Cực", f"{pos_prob*100:.2f}%")
-                else:
-                    st.error("### Kết quả: Tiêu cực")
-                    st.metric("Độ Tiêu Cực", f"{neg_prob*100:.2f}%")
-
-            with res_col2:
-                st.write("**Chi tiết độ phân cực cảm xúc:**")
-                st.write(f"**Tích cực:** {pos_prob*100:.2f}%")
-                st.progress(float(pos_prob))
-                st.write(f"**Tiêu cực:** {neg_prob*100:.2f}%")
-                st.progress(float(neg_prob))
+            # Gọi Pop-up Box đè giữa trang
+            show_imdb_result(is_pos, pos_prob, neg_prob, execution_time)
         else:
             st.warning("Vui lòng nhập đoạn đánh giá phim.")
