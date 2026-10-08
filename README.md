@@ -40,6 +40,7 @@ data/demo_samples.txt             demo sentences + predicted labels
 models/                           *_bundle.joblib, *_model.pkl, *_vectorizer.pkl (git-ignored)
 reports/                          metrics_table.md, metrics.json, benchmark_table.csv
 docs/                             report_template.tex -> report.tex, confusion_matrices.png
+app.py                       Streamlit UI source code
 ```
 
 `src/` and `notebooks/` are two independent implementations of the same experiments and
@@ -58,3 +59,33 @@ label, conf = b["label_map"][i], float(proba[i])
 `b["task"]` is `"spam"` or `"sentiment"`. Plain `proba.argmax()` is also correct — it just
 uses a 0.5 cut-off. Keys: `task`, `model`, `threshold`, `classes`, `label_map`, `metrics`,
 `meta`.
+
+# Naive Bayes Text Classification - Mini Project
+
+Ứng dụng minh họa thuật toán **Naive Bayes** trong hai bài toán xử lý ngôn ngữ tự nhiên (NLP):
+1. **Phân loại tin nhắn SMS (Spam / Ham)**
+2. **Phân tích cảm xúc đánh giá phim IMDb (Positive / Negative)**
+
+---
+
+## 🌟 Tính năng của Giao diện (UI)
+
+* **Chuyển đổi bài toán dễ dàng:** Sidebar cho phép chọn linh hoạt giữa phân loại SMS Spam và phân tích cảm xúc IMDb.
+* **Mẫu dùng thử nhanh:** Tích hợp sẵn các mẫu tin nhắn / đánh giá để kiểm thử tức thì.
+* **Hiển thị kết quả dạng Modal Popup:** Nổi đè chính giữa màn hình với thông tin nhãn dự đoán, xác suất chi tiết và thời gian xử lý (ms).
+* **Nút làm sạch:** Xóa nhanh nội dung ô nhập liệu.
+
+---
+
+## 🛠️ Hướng dẫn Cài đặt & Khởi chạy
+
+### 1. Cài đặt môi trường & thư viện
+Mở Terminal / PowerShell tại thư mục gốc của dự án và chạy lệnh:
+
+```bash
+pip install -r requirements.txt
+```
+### 2.Run
+```bash
+Chạy lệnh streamlit run app.py
+```
