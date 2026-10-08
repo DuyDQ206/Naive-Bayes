@@ -68,7 +68,7 @@ uses a 0.5 cut-off. Keys: `task`, `model`, `threshold`, `classes`, `label_map`, 
 
 ---
 
-## 🌟 Tính năng của Giao diện (UI)
+## Tính năng của Giao diện (UI)
 
 * **Chuyển đổi bài toán dễ dàng:** Sidebar cho phép chọn linh hoạt giữa phân loại SMS Spam và phân tích cảm xúc IMDb.
 * **Mẫu dùng thử nhanh:** Tích hợp sẵn các mẫu tin nhắn / đánh giá để kiểm thử tức thì.
@@ -77,15 +77,13 @@ uses a 0.5 cut-off. Keys: `task`, `model`, `threshold`, `classes`, `label_map`, 
 
 ---
 
-## 🛠️ Hướng dẫn Cài đặt & Khởi chạy
-
-### 1. Cài đặt môi trường & thư viện
+## Hướng dẫn Cài đặt & Khởi chạy
 Mở Terminal / PowerShell tại thư mục gốc của dự án và chạy lệnh:
-
+### 1. Cài đặt môi trường & thư viện
 ```bash
 pip install -r requirements.txt
 ```
 ### 2.Run
 ```bash
-Chạy lệnh streamlit run app.py
+streamlit run app.py
 ```
