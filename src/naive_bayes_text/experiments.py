@@ -12,6 +12,7 @@ Stage 1 is the only place the test set is read.
 from __future__ import annotations
 import gc
 import time
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
@@ -32,6 +33,7 @@ from sklearn.metrics import (
 from sklearn.model_selection import GridSearchCV, cross_val_score
 from sklearn.naive_bayes import BernoulliNB, ComplementNB, MultinomialNB
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 from sklearn.utils.class_weight import compute_sample_weight
 
@@ -41,6 +43,8 @@ from .config import (
     CV_FOLDS,
     HEAVY_ON_IMDB,
     KNN_MAX_TEST,
+    LABEL_MAP,
+    MODELS_DIR,
     TASKS,
     THRESHOLD_GRID,
     VARIANTS,
@@ -321,6 +325,12 @@ def run_benchmark(splits: dict, verbose: bool = True) -> pd.DataFrame:
     like with like; ``tune_s`` reports the extra cost of the search separately.
     """
     rows = []
+    output_dir = MODELS_DIR / "benchmark"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    filenames = dict(zip(BENCHMARK_CANDIDATES, (
+        "multinomial_nb", "bernoulli_nb", "complement_nb",
+        "logistic_regression", "linear_svc", "knn", "random_forest",
+    )))
     for name, (X_train, X_test, y_train, y_test) in splits.items():
         positive = TASKS[name]["positive"]
         vectorizer = TfidfVectorizer(**BENCH_VEC_PARAMS)
@@ -380,6 +390,23 @@ def run_benchmark(splits: dict, verbose: bool = True) -> pd.DataFrame:
                     f1_macro=f1_score(y_used, pred, average="macro", zero_division=0),
                     roc_auc=auc, note="",
                 )
+                path = output_dir / f"{name}_{filenames[model_name]}.joblib"
+                joblib.dump({
+                    "task": name,
+                    "model": Pipeline([("tfidf", vectorizer), ("classifier", model)]),
+                    "classes": list(model.classes_),
+                    "label_map": LABEL_MAP[name],
+                    "metrics": row.copy(),
+                    "meta": {
+                        "model_name": model_name,
+                        "best_params": best_params,
+                        "vectorizer_params": dict(BENCH_VEC_PARAMS),
+                        "n_train": len(y_train),
+                        "n_test": len(y_used),
+                        "n_features": A.shape[1],
+                        "input": "cleaned text (use clean_text before predict)",
+                    },
+                }, path, compress=3)
                 rows.append(row)
                 if verbose:
                     print(f"  {row['model']:28s} acc={row['accuracy']:.4f} "
