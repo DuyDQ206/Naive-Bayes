@@ -16,7 +16,7 @@ nbformat>=5.9
 nbclient>=0.10
 
 # TV4 (the Streamlit interface) also needs:
-#   streamlit>=1.40
+streamlit>=1.40
 # TV7 (slides) may need:
 #   typst
 #
