@@ -14,6 +14,109 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# ============================================================
+# High-contrast theme for presentations
+# ============================================================
+st.markdown(
+    """
+    <style>
+    /* Main canvas and default text */
+    .stApp, [data-testid="stAppViewContainer"] {
+        background-color: #FFFFFF;
+        color: #172033;
+    }
+    .stApp, .stApp p, .stApp li, .stApp label,
+    .stApp span, .stApp div, .stApp td, .stApp th {
+        color: #172033;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #111827 !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stCaptionContainer"],
+    [data-testid="stCaptionContainer"] p {
+        color: #4B5563 !important;
+    }
+    /* Sidebar: clear separation and readable controls */
+    [data-testid="stSidebar"] {
+        background-color: #F1F5F9;
+        border-right: 1px solid #CBD5E1;
+    }
+    [data-testid="stSidebar"] * {
+        color: #172033 !important;
+    }
+    /* Inputs */
+    input, textarea, [data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        color: #111827 !important;
+        border-color: #64748B !important;
+    }
+    input::placeholder, textarea::placeholder {
+        color: #64748B !important;
+        opacity: 1 !important;
+    }
+    /* Buttons: dark text on a light surface */
+    .stButton button, [data-testid="stDownloadButton"] button {
+        background-color: #FFFFFF !important;
+        color: #123B6D !important;
+        border: 1px solid #345B86 !important;
+        font-weight: 600 !important;
+    }
+    .stButton button:hover, [data-testid="stDownloadButton"] button:hover {
+        background-color: #E8F1FB !important;
+        border-color: #123B6D !important;
+    }
+    /* Tabs and tables */
+    [data-baseweb="tab"] { color: #334155 !important; }
+    [data-baseweb="tab"][aria-selected="true"] {
+        color: #123B6D !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stDataFrame"] {
+        border: 1px solid #CBD5E1;
+        border-radius: 6px;
+    }
+    [data-testid="stAlert"] { border: 1px solid #64748B; }
+    /* Make secondary/muted text readable on a projector */
+    [data-testid="stCaptionContainer"],
+    [data-testid="stCaptionContainer"] p,
+    .stMarkdown small, small,
+    [data-testid="stWidgetLabel"],
+    [data-testid="stWidgetLabel"] p,
+    [data-testid="stHelp"],
+    [data-testid="stTooltipContent"] {
+        color: #27364B !important;
+        font-weight: 600 !important;
+        opacity: 1 !important;
+    }
+    .stMarkdown p, .stMarkdown li, .stMarkdown span,
+    [data-testid="stMetricLabel"],
+    [data-testid="stMetricValue"],
+    [data-testid="stExpander"] summary,
+    [data-testid="stDataFrame"] * {
+        color: #172033;
+    }
+    [data-testid="stMetricLabel"] {
+        font-weight: 700 !important;
+    }
+    [data-testid="stExpander"] summary {
+        font-weight: 700 !important;
+    }
+    [data-testid="stDataFrame"] th {
+        color: #111827 !important;
+        font-weight: 700 !important;
+    }
+    [data-testid="stDataFrame"] td {
+        color: #172033 !important;
+        font-weight: 500 !important;
+    }
+    /* Stronger visibility for status and helper text */
+    [data-testid="stAlert"] p { font-weight: 600 !important; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 BENCHMARK_DIR = os.path.join(MODELS_DIR, "benchmark")
@@ -42,7 +145,7 @@ TASKS = {
     "IMDb Sentiment Analysis": {
         "folder": "IMDb Sentiment",
         "files": IMDB_FILES,
-        "positive_labels": {"pos", "positive", "1", "true"},
+        "positive_labels": {"pos", "positive", "true"},
         "positive_text": "Positive",
         "negative_text": "Negative",
         "description": "Classifies movie reviews as positive or negative.",
@@ -50,7 +153,7 @@ TASKS = {
     "SMS Spam Detection": {
         "folder": "SMS Spam",
         "files": SMS_FILES,
-        "positive_labels": {"spam", "1", "true"},
+        "positive_labels": {"spam", "true"},
         "positive_text": "Spam",
         "negative_text": "Ham (Legitimate Message)",
         "description": "Detects spam, promotional, or potentially fraudulent text messages.",
@@ -90,6 +193,7 @@ def find_model_file(filename):
         candidate = os.path.join(folder, filename)
         if os.path.isfile(candidate):
             return candidate
+    
     # Last resort: search subfolders of models/benchmark/ (e.g. benchmark/imdb/...).
     matches = glob.glob(os.path.join(BENCHMARK_DIR, "**", filename), recursive=True)
     return matches[0] if matches else None
@@ -99,13 +203,11 @@ def find_model_file(filename):
 def load_all_models():
     loaded = {task: {} for task in TASKS}
     errors = []
-
     for task_name, config in TASKS.items():
         for display_name, filename in config["files"].items():
             path = find_model_file(filename)
             if path is None:
                 continue
-
             try:
                 artifact = joblib.load(path)
                 if isinstance(artifact, dict) and "model" in artifact:
@@ -114,7 +216,6 @@ def load_all_models():
                     label_map = artifact.get("label_map", {})
                     meta = artifact.get("meta", {})
                     classes = artifact.get("classes", [])
-
                 else:
                     # Support a bare estimator saved with joblib.
                     model = artifact
@@ -141,37 +242,68 @@ all_models, load_errors = load_all_models()
 # 3. Helpers
 # ============================================================
 def get_label_text(prediction, task_name, label_map):
-    """Map model output to a readable label without assuming 0/1 encoding."""
+    """Convert a model label to UI text without assuming numeric label encoding.
+    Numeric labels (0/1) are interpreted through the artifact's label_map first.
+    If no mapping exists, their meaning is ambiguous, so return an unknown status
+    rather than incorrectly treating 1 as positive or 0 as negative.
+    """
     task_config = TASKS[task_name]
     raw = str(prediction).strip()
     normalized = raw.lower()
-    # Most benchmark models predict strings: pos/neg or spam/ham.
-    if normalized in task_config["positive_labels"]:
-        return task_config["positive_text"], True
-    if task_name == "IMDb Sentiment Analysis":
-        if normalized in {"neg", "negative", "0", "false"}:
-            return task_config["negative_text"], False
-    else:
-        if normalized in {"ham", "legit", "legitimate", "not spam", "0", "false"}:
-            return task_config["negative_text"], False
-    # Use label_map when a model uses numeric labels.
-    try:
-        mapped = label_map.get(int(float(raw)))
-        if mapped:
-            mapped_lower = str(mapped).lower()
-            is_positive = mapped_lower in task_config["positive_labels"]
-            if task_name == "IMDb Sentiment Analysis":
-                is_positive = "positive" in mapped_lower or mapped_lower == "pos"
-            else:
-                is_positive = "spam" in mapped_lower and "not spam" not in mapped_lower
-            return str(mapped), is_positive
-    except (ValueError, TypeError):
-        pass
-    # Safe fallback: show the actual label returned by the model.
-    return raw, False
+    def classify_label(label):
+        value = str(label).strip().lower()
+        if task_name == "IMDb Sentiment Analysis":
+            if value in {"pos", "positive", "1", "true"} or "positive" in value:
+                return task_config["positive_text"], True
+            if value in {"neg", "negative", "0", "false"} or "negative" in value:
+                return task_config["negative_text"], False
+        else:
+            if value in {"spam", "1", "true"} or ("spam" in value and "not spam" not in value):
+                return task_config["positive_text"], True
+            if value in {"ham", "legit", "legitimate", "not spam", "0", "false"}:
+                return task_config["negative_text"], False
+        return None
+    # Explicit text labels are safe to interpret directly.
+    direct = classify_label(normalized)
+    if direct is not None and not normalized.replace(".", "", 1).isdigit():
+        return direct
+    # Resolve numeric / encoded labels from label_map before interpreting them.
+    mapped = None
+    if isinstance(label_map, dict):
+        candidates = [raw]
+        try:
+            numeric = int(float(raw))
+            candidates.extend([numeric, str(numeric)])
+        except (ValueError, TypeError):
+            pass
+        for key in candidates:
+            if key in label_map:
+                mapped = label_map[key]
+                break
+        # Also support the inverse format, e.g. {"ham": 0, "spam": 1}.
+        if mapped is None:
+            try:
+                numeric_prediction = int(float(raw))
+                for label_name, encoded_value in label_map.items():
+                    if str(encoded_value).strip() == str(numeric_prediction):
+                        mapped = label_name
+                        break
+            except (ValueError, TypeError):
+                pass
+    if mapped is not None:
+        mapped_result = classify_label(mapped)
+        if mapped_result is not None:
+            return mapped_result
+        # Preserve the mapped label, but do not falsely claim its polarity.
+        return str(mapped), None
+    # Unknown numeric encodings must not silently become Positive/Negative/Spam/Ham.
+    if normalized in {"0", "1", "0.0", "1.0"}:
+        return f"Unknown label ({raw}) — check model label_map", None
+    return raw, None
 
 def get_confidence(model, text):
     """Return the largest predicted class probability, if available.
+
     This value is not guaranteed to be calibrated and should not be interpreted
     as the probability that the prediction is correct.
     """
@@ -201,7 +333,6 @@ def show_result_dialog(task_name, model_name, text_input, result, is_positive,
         st.caption(task_name)
         # Highlight the selected model.
         st.markdown(f"Model: :blue-background[**{model_name}**]")
-
         if is_positive:
             st.success(f"Prediction: **{result}**")
         else:
@@ -214,10 +345,8 @@ def show_result_dialog(task_name, model_name, text_input, result, is_positive,
             else:
                 st.metric("Estimated Confidence", "N/A")
                 st.caption("This model does not provide class probabilities.")
-
         with col2:
             st.metric("Inference Time", f"{elapsed_ms:.2f} ms")
-
         if confidence is not None:
             st.progress(min(max(confidence / 100, 0.0), 1.0))
         else:
@@ -233,13 +362,53 @@ def show_all_results_dialog(task_name, text_input, rows):
     @st.dialog("All Models Results", width="large")
     def _dialog():
         st.caption(task_name)
+        # Use the majority prediction as the final result, rather than always
+        # counting only the positive class. Ignore failed/unknown predictions.
         valid = [r for r in rows if r["is_positive"] is not None]
         positive_count = sum(1 for r in valid if r["is_positive"])
+        negative_count = len(valid) - positive_count
         positive_text = TASKS[task_name]["positive_text"]
-        st.write(
-            f"**{positive_count}/{len(valid)}** models predict "
-            f"**{positive_text}**."
-        )
+        negative_text = TASKS[task_name]["negative_text"]
+        if positive_count > negative_count:
+            final_label = positive_text
+            final_count = positive_count
+        elif negative_count > positive_count:
+            final_label = negative_text
+            final_count = negative_count
+        else:
+            final_label = None
+            final_count = positive_count
+        if not valid:
+            st.error("No valid model predictions are available to determine a final result.")
+        elif final_label is None:
+            st.markdown(
+                f'<div style="padding:16px 18px;border:2px solid #B45309;'
+                f'border-radius:10px;background:#FFFBEB;color:#78350F;font-size:20px;'
+                f'font-weight:800;">FINAL RESULT: TIE</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"**{positive_count}/{len(valid)}** models predict **{positive_text}**; "
+                f"**{negative_count}/{len(valid)}** predict **{negative_text}**."
+            )
+        else:
+            # HAM and POSITIVE are favorable labels (green); SPAM and NEGATIVE are red.
+            if task_name == "SMS Spam Detection":
+                final_color = "#15803D" if final_label == negative_text else "#B91C1C"
+                final_bg = "#F0FDF4" if final_label == negative_text else "#FEF2F2"
+            else:
+                final_color = "#15803D" if final_label == positive_text else "#B91C1C"
+                final_bg = "#F0FDF4" if final_label == positive_text else "#FEF2F2"
+            st.markdown(
+                f'<div style="padding:16px 18px;border:2px solid {final_color};'
+                f'border-radius:10px;background:{final_bg};color:{final_color};'
+                f'font-size:22px;font-weight:800;">FINAL RESULT: {final_label.upper()} '
+                f'— {final_count}/{len(valid)} MODELS</div>',
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                f"**{final_count}/{len(valid)}** models predict **{final_label}**."
+            )
 
         table = pd.DataFrame([
             {
@@ -274,7 +443,6 @@ with st.sidebar:
         "Select a Task",
         list(TASKS.keys()),
     )
-
     available_models = all_models.get(task_name, {})
     run_all = False
     if available_models:
@@ -318,6 +486,7 @@ st.title(
     else "SMS Spam Detection System"
 )
 st.write(TASKS[task_name]["description"])
+
 tab_predict, tab_models, tab_about = st.tabs(
     ["Predict", "Available Models", "System Information"]
 )
@@ -404,14 +573,12 @@ with tab_predict:
                     start_time = time.perf_counter()
                     prediction = current_model.predict([text])[0]
                     elapsed_ms = (time.perf_counter() - start_time) * 1000
-
                     result_text, is_positive = get_label_text(
                         prediction,
                         task_name,
                         selected_artifact["label_map"],
                     )
                     confidence = get_confidence(current_model, text)
-
                     show_result_dialog(
                         task_name,
                         model_name,
@@ -440,7 +607,6 @@ with tab_predict:
             )
 
             summary_rows = []
-
             for name, artifact in available_models.items():
                 metrics = artifact["metrics"]
                 row = {"Model": name}
@@ -452,7 +618,6 @@ with tab_predict:
                         if r and r["confidence"] is not None
                         else "N/A"
                     )
-
                     row["Inference Time (ms)"] = (
                         f"{r['elapsed_ms']:.2f}"
                         if r and r["elapsed_ms"] is not None
