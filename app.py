@@ -500,6 +500,7 @@ with tab_predict:
         sample_choice = st.selectbox(
             "Quick Sample",
             ["No Sample"] + sample_names,
+            key="quick_sample",
         )
 
         default_text = (
@@ -532,17 +533,19 @@ with tab_predict:
                 use_container_width=True,
                 disabled=not available_models,
             )
+        def clear_text_callback():
+            # Button callbacks run before Streamlit instantiates the text_area widget.
+            st.session_state.input_text = ""
+            st.session_state.last_sample_choice = "No Sample"
+            st.session_state.quick_sample = "No Sample"
+
         with clear_col:
-            clear_clicked = st.button(
+            st.button(
                 "Clear Text",
                 use_container_width=True,
                 key="clear_text_button",
+                on_click=clear_text_callback,
             )
-
-        if clear_clicked:
-            st.session_state.input_text = ""
-            st.session_state.last_sample_choice = "No Sample"
-            st.rerun()
 
         if predict_clicked:
             text = user_text.strip()
