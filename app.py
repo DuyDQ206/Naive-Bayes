@@ -524,12 +524,25 @@ with tab_predict:
             placeholder="Enter a movie review or text message here...",
         )
 
-        predict_clicked = st.button(
-            "Analyze Text",
-            type="primary",
-            use_container_width=True,
-            disabled=not available_models,
-        )
+        analyze_col, clear_col = st.columns(2, gap="medium")
+        with analyze_col:
+            predict_clicked = st.button(
+                "Analyze Text",
+                type="primary",
+                use_container_width=True,
+                disabled=not available_models,
+            )
+        with clear_col:
+            clear_clicked = st.button(
+                "Clear Text",
+                use_container_width=True,
+                key="clear_text_button",
+            )
+
+        if clear_clicked:
+            st.session_state.input_text = ""
+            st.session_state.last_sample_choice = "No Sample"
+            st.rerun()
 
         if predict_clicked:
             text = user_text.strip()
